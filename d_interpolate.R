@@ -6,7 +6,7 @@ library(gtools)
 library(SpaDES)
 library(tictoc)
 
-tablist <- mixedsort(sort(list.files("D:/sfugger/Data/first_run_tables", pattern = ".txt", full.names = TRUE)))
+tablist <- mixedsort(sort(list.files("D:/sfugger/Data/speedup_tables", pattern = ".txt", full.names = TRUE)))
 #head(tablist)
 
 #supercomplicated interpolation (list with different kind of values: clouds, land, rsle)
@@ -27,32 +27,30 @@ for (i in 1:length(tablist)) {
   idx <- which(is.na(int1))
   int1[idx] <- int2[idx]
   int$rsle <- replace(int1, is.na(int1), 50)
-  write.table(int, file= paste("D:/sfugger/Data/first_run_tables_out/tile",i,".txt", sep=""))
+  write.table(int, file= paste("D:/sfugger/Data/speedup_tables_out/tile",i,".txt", sep=""))
 }
 
-#write rsle into tiles
-#read tileslist
+#assign values to raster
+
 tileslist <- mixedsort(sort(list.files("D:/sfugger/Data/first_run_tiles", pattern = ".tif", full.names = TRUE)))
 tablist <-mixedsort(sort(list.files("D:/sfugger/Data/first_run_tables_out", pattern = ".txt", full.names = TRUE)))
-#to get number of days
+
+bucket <- raster("D:/sfugger/Data/merge.tif")
+bucket[!is.na(bucket)] <- 0
 days <- nrow(read.table(tablist[1]))
 
-
-for(d in 144:days) {
-tic()
-    for(t in 1:length(tileslist)) {
-    tile <- raster(tileslist[t])
-    list <- read.table(tablist[t])
-    tile[] <- list$rsle[d]
-    writeRaster(tile, filename=paste("D:/sfugger/Data/first_run_tiles_out/","tileout",t, sep=""), format="GTiff", overwrite=TRUE)  
-  }
-  tilesoutlist <- list.files("D:/sfugger/Data/first_run_tiles_out/", pattern = ".tif", full.names = TRUE)
-  tilesout <- lapply(tilesoutlist, raster) 
-  newras <- mergeRaster(tilesout)
-  writeRaster(newras, filename=paste("D:/sfugger/Data/first_run_output/", substring(list$image[d], first = 1, last = 4), "/", substring(list$image[d], first = 1, last = 7), sep=""), format="GTiff", overwrite=TRUE)    
-toc()
+for (d in 2477:days) {
+  tic()  
+  outras <- bucket
+    
+    for(t in 1:length(tileslist)){
+      list <- read.table(tablist[t])
+      tile <- raster(tileslist[t]) 
+      outras[(coords=extent(tile))] <- list$rsle[d]
+    }
+  writeRaster(outras, filename=paste("D:/sfugger/Data/first_run_output/", substring(list$image[d], first = 1, last = 4), "/", substring(list$image[d], first = 1, last = 7), sep=""), format="GTiff", overwrite=TRUE)
+  toc() 
 }
+
+
   
-
-
-         
